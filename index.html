@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ELECTZA · ESS Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0A0E1A; --panel:#10172A; --panel2:#0C1322; --border:#1E2940;
+    --green:#14F195; --green-dim:#0BA06A; --red:#FF5C5C; --amber:#FFB020;
+    --text:#E6EDF5; --muted:#8A97AD; --muted2:#48566E;
+    --sans:'Inter',system-ui,sans-serif; --mono:'JetBrains Mono',ui-monospace,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  body{background:var(--bg);color:var(--text);font-family:var(--sans);
+    line-height:1.45;padding:16px 14px 60px;max-width:560px;margin:0 auto;
+    background-image:radial-gradient(circle at 50% -10%,rgba(20,241,149,.06),transparent 55%);}
+  .brand{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+  .logo{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--green),var(--green-dim));
+    display:grid;place-items:center;font-weight:700;color:#04130C;font-size:15px;font-family:var(--mono)}
+  .brand h1{font-size:17px;font-weight:700;letter-spacing:.2px}
+  .brand span{color:var(--green)}
+  .sub{color:var(--muted);font-size:12.5px;margin-bottom:18px}
+
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:16px;
+    padding:16px;margin-bottom:14px}
+  .card h2{font-size:13px;text-transform:uppercase;letter-spacing:1.4px;color:var(--muted);
+    font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--green)}
+
+  /* Gauge */
+  .gauge-wrap{display:flex;flex-direction:column;align-items:center;gap:2px}
+  .gauge{position:relative;width:230px;height:130px}
+  .ess-val{font-family:var(--mono);font-size:42px;font-weight:700;line-height:1;
+    position:absolute;left:0;right:0;top:62px;text-align:center}
+  .ess-lab{position:absolute;left:0;right:0;top:108px;text-align:center;
+    font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
+  .status{margin-top:6px;font-family:var(--mono);font-weight:700;font-size:14px;
+    padding:6px 16px;border-radius:20px;letter-spacing:.5px}
+  .status.ok{background:rgba(20,241,149,.13);color:var(--green);border:1px solid rgba(20,241,149,.35)}
+  .status.no{background:rgba(255,92,92,.12);color:var(--red);border:1px solid rgba(255,92,92,.32)}
+
+  /* metric grid */
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .metric{background:var(--panel2);border:1px solid var(--border);border-radius:12px;padding:12px 13px}
+  .metric .k{font-size:11px;color:var(--muted);letter-spacing:.4px;margin-bottom:6px;
+    display:flex;align-items:center;gap:5px;min-height:28px}
+  .metric .v{font-family:var(--mono);font-size:20px;font-weight:700}
+  .v.green{color:var(--green)} .v.red{color:var(--red)} .v.amber{color:var(--amber)}
+  .full{grid-column:1/-1}
+
+  /* golden rule */
+  .rule{background:linear-gradient(135deg,rgba(20,241,149,.10),rgba(20,241,149,.02));
+    border:1px solid rgba(20,241,149,.28);border-radius:14px;padding:14px;margin-bottom:14px}
+  .rule b{color:var(--green)}
+  .rule p{font-size:13.5px;color:#C8D4E2}
+  .rule .eq{font-family:var(--mono);font-size:14px;color:var(--green);margin-top:8px;font-weight:500}
+
+  /* inputs */
+  label{font-size:12px;color:var(--muted);display:block;margin-bottom:6px;letter-spacing:.3px}
+  input{width:100%;background:var(--panel2);border:1px solid var(--border);border-radius:11px;
+    color:var(--text);font-family:var(--mono);font-size:16px;padding:12px 13px;font-weight:500}
+  input:focus{outline:none;border-color:var(--green)}
+  .row{display:flex;gap:10px}
+  .row>div{flex:1}
+  button{font-family:var(--sans);font-weight:600;border:none;border-radius:11px;
+    cursor:pointer;font-size:14px;transition:.12s}
+  .btn-add{width:100%;background:var(--green);color:#04130C;padding:13px;margin-top:12px;font-weight:700}
+  .btn-add:active{transform:scale(.985)}
+  .mini{background:var(--panel2);border:1px solid var(--border);color:var(--muted);
+    padding:7px 11px;font-size:12px;border-radius:9px}
+
+  /* day list */
+  .day{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--border)}
+  .day:last-child{border-bottom:none}
+  .day .d{font-size:12.5px;color:var(--muted);flex:1;font-family:var(--mono)}
+  .day .a{font-family:var(--mono);font-weight:700;font-size:15px}
+  .day .a.pos{color:var(--green)} .day .a.neg{color:var(--red)}
+  .day .tag{font-size:9.5px;text-transform:uppercase;letter-spacing:.6px;padding:2px 6px;border-radius:5px;
+    background:rgba(255,176,32,.14);color:var(--amber)}
+  .del{background:none;border:none;color:var(--muted2,#48566e);font-size:18px;padding:2px 4px;line-height:1}
+  .empty{color:var(--muted);font-size:13px;text-align:center;padding:14px 0}
+
+  /* what-if */
+  .whatif-out{margin-top:12px;padding:13px;background:var(--panel2);border-radius:12px;
+    border:1px solid var(--border);display:none}
+  .whatif-out.show{display:block}
+  .whatif-out .line{display:flex;justify-content:space-between;align-items:center;
+    font-size:13.5px;padding:4px 0}
+  .whatif-out .line b{font-family:var(--mono);font-size:15px}
+
+  .settings{display:flex;gap:10px}
+  .foot{text-align:center;color:var(--muted);font-size:11px;margin-top:20px;line-height:1.6}
+  .foot span{color:var(--green-dim)}
+
+  /* backup buttons */
+  .btn-row{display:flex;gap:10px;margin-top:12px}
+  .btn-sec{flex:1;background:var(--panel2);border:1px solid var(--border);color:var(--text);
+    padding:12px;font-weight:600;border-radius:11px}
+  .btn-sec:active{border-color:var(--green)}
+  .btn-danger{color:var(--red);border-color:rgba(255,92,92,.3)}
+  .pinrow{display:flex;gap:10px;margin-top:10px;align-items:flex-end}
+  .pinrow input{flex:1}
+  .pinrow button{white-space:nowrap;padding:12px 16px}
+  .secnote{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.5}
+
+  /* toast */
+  .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);
+    background:var(--green);color:#04130C;font-weight:700;font-size:13px;padding:10px 20px;
+    border-radius:24px;opacity:0;pointer-events:none;transition:.25s;z-index:200;
+    box-shadow:0 6px 24px rgba(20,241,149,.35)}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  /* lock overlay */
+  .lock{position:fixed;inset:0;background:#070B14;z-index:500;display:none;
+    flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:24px}
+  .lock.show{display:flex}
+  .lock .logo{width:54px;height:54px;border-radius:14px;font-size:22px}
+  .lock h2{font-size:16px;font-weight:700;letter-spacing:.3px;color:var(--text);text-transform:none}
+  .lock .pininput{width:200px;text-align:center;font-size:26px;letter-spacing:10px;
+    font-family:var(--mono);padding:14px}
+  .lock .err{color:var(--red);font-size:13px;min-height:18px;font-family:var(--mono)}
+  .lock button{background:var(--green);color:#04130C;font-weight:700;padding:13px 40px;border-radius:11px}
+  .hint{font-size:11.5px;color:var(--muted);margin-top:8px}
+  .bar{height:12px;background:var(--panel2);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+  .bar-fill{height:100%;width:0;background:linear-gradient(90deg,var(--green-dim),var(--green));
+    border-radius:8px;transition:width .4s ease}
+  .bar-meta{display:flex;justify-content:space-between;font-family:var(--mono);font-size:11.5px;
+    color:var(--muted);margin-top:7px}
+  .bar-meta span:nth-child(2){color:var(--green);font-weight:700}
+</style>
+</head>
+<body>
+
+<!-- LOCK SCREEN -->
+<div class="lock" id="lockScreen">
+  <div class="logo">EZ</div>
+  <h2>Enter PIN</h2>
+  <input class="pininput" id="lockInput" type="password" inputmode="numeric" maxlength="8" autocomplete="off" placeholder="••••">
+  <div class="err" id="lockErr"></div>
+  <button onclick="tryUnlock()">Unlock</button>
+</div>
+
+<div class="toast" id="toast">Saved ✓</div>
+
+<div class="brand">
+  <div class="logo">EZ</div>
+  <h1>ELECTZA <span>· ESS Tracker</span></h1>
+</div>
+<div class="sub">Top One Trader · Equity Stability Score · target ≤ <span id="subTarget">20</span>%</div>
+
+<!-- GAUGE -->
+<div class="card">
+  <div class="gauge-wrap">
+    <div class="gauge">
+      <svg viewBox="0 0 230 130" width="230" height="130">
+        <path d="M15 120 A100 100 0 0 1 215 120" fill="none" stroke="#1E2940" stroke-width="14" stroke-linecap="round"/>
+        <path id="arcFill" d="M15 120 A100 100 0 0 1 215 120" fill="none" stroke="var(--green)" stroke-width="14" stroke-linecap="round"/>
+        <line id="threshLine" x1="0" y1="0" x2="0" y2="0" stroke="#fff" stroke-width="2.5" opacity=".85"/>
+      </svg>
+      <div class="ess-val" id="essVal">—</div>
+      <div class="ess-lab">Current ESS</div>
+    </div>
+    <div class="status no" id="statusBadge">Log a day to start</div>
+  </div>
+</div>
+
+<!-- GOLDEN RULE -->
+<div class="rule">
+  <p>With <b>no losing days</b> and <b>equal daily profits</b>, your ESS equals <b>1 ÷ number of profitable days</b>.</p>
+  <div class="eq">5 even days = 20% &nbsp;·&nbsp; 6 = 16.7% &nbsp;·&nbsp; 7 = 14.3%</div>
+</div>
+
+<!-- GOAL PLAN -->
+<div class="card" id="goalCard">
+  <h2><span class="dot"></span>Goal plan · <span id="goalAmt" style="color:var(--green)">$1,000</span></h2>
+  <div class="bar"><div class="bar-fill" id="goalBar"></div></div>
+  <div class="bar-meta"><span id="goalNow">$0</span><span id="goalPct">0%</span><span id="goalTo">$1,000</span></div>
+  <div class="grid" style="margin-top:14px">
+    <div class="metric"><div class="k">Max any single day</div><div class="v amber" id="gMax">—</div></div>
+    <div class="metric"><div class="k">Recommended / day</div><div class="v green" id="gRec">—</div></div>
+    <div class="metric"><div class="k">Min days (no buffer)</div><div class="v" id="gMin">—</div></div>
+    <div class="metric"><div class="k">Days left (recommended)</div><div class="v" id="gLeft">—</div></div>
+  </div>
+  <div class="hint" id="goalHint"></div>
+</div>
+
+<!-- METRICS -->
+<div class="card">
+  <h2><span class="dot"></span>Live calculation</h2>
+  <div class="grid">
+    <div class="metric"><div class="k">Total profit</div><div class="v green" id="mTotal">$0</div></div>
+    <div class="metric"><div class="k">Profitable days</div><div class="v" id="mDays">0</div></div>
+    <div class="metric"><div class="k">Largest win day</div><div class="v green" id="mWin">$0</div></div>
+    <div class="metric"><div class="k">Largest loss day</div><div class="v red" id="mLoss">$0</div></div>
+    <div class="metric full"><div class="k">Min total profit to qualify <span style="opacity:.6">(at current best/worst day)</span></div><div class="v amber" id="mReq">—</div></div>
+    <div class="metric full"><div class="k">Still needed to qualify</div><div class="v amber" id="mNeed">—</div></div>
+    <div class="metric"><div class="k">Safe ceiling tomorrow</div><div class="v" id="mCeil">—</div></div>
+    <div class="metric"><div class="k">Est. days left</div><div class="v" id="mLeft">—</div></div>
+    <div class="metric full"><div class="k">Min payout (2% of account)</div><div class="v" id="mPayout">$500</div></div>
+  </div>
+  <div class="hint" id="ceilHint"></div>
+</div>
+
+<!-- ADD DAY -->
+<div class="card">
+  <h2><span class="dot"></span>Log a trading day</h2>
+  <div class="row">
+    <div><label>Date</label><input type="date" id="inDate"></div>
+    <div><label>Day P&amp;L (+ win / − loss)</label><input type="number" id="inAmt" inputmode="decimal" placeholder="e.g. 80 or -40" step="0.01"></div>
+  </div>
+  <button class="btn-add" onclick="addDay()">Add day</button>
+</div>
+
+<!-- WHAT-IF -->
+<div class="card">
+  <h2><span class="dot"></span>What if tomorrow I make…</h2>
+  <input type="number" id="wfAmt" inputmode="decimal" placeholder="enter tomorrow's expected P&L" step="0.01" oninput="whatIf()">
+  <div class="whatif-out" id="wfOut">
+    <div class="line"><span>Projected ESS</span><b id="wfEss">—</b></div>
+    <div class="line"><span>Projected total profit</span><b id="wfTot">—</b></div>
+    <div class="line"><span>Result</span><b id="wfRes">—</b></div>
+  </div>
+</div>
+
+<!-- DAY LOG -->
+<div class="card">
+  <h2><span class="dot"></span>Day log <span id="clearWrap" style="margin-left:auto"></span></h2>
+  <div id="dayList"><div class="empty">No days logged yet.</div></div>
+</div>
+
+<!-- SETTINGS -->
+<div class="card">
+  <h2><span class="dot"></span>Settings</h2>
+  <div class="settings">
+    <div style="flex:1"><label>Account size ($)</label><input type="number" id="setAcct" value="25000" onchange="saveSettings()"></div>
+    <div style="flex:1"><label>Target ESS (%)</label><input type="number" id="setTarget" value="20" onchange="saveSettings()"></div>
+  </div>
+  <div style="margin-top:10px"><label>Withdrawal goal ($)</label><input type="number" id="setGoal" value="1000" onchange="saveSettings()"></div>
+</div>
+
+<!-- BACKUP & SECURITY -->
+<div class="card">
+  <h2><span class="dot"></span>Backup &amp; security</h2>
+  <div class="btn-row">
+    <button class="btn-sec" onclick="exportData()">⤓ Export backup</button>
+    <button class="btn-sec" onclick="document.getElementById('importFile').click()">⤒ Import backup</button>
+  </div>
+  <input type="file" id="importFile" accept="application/json,.json" style="display:none" onchange="importData(event)">
+  <div class="secnote">Export saves all your days + settings to a file you can keep or move to another phone. Import restores it.</div>
+
+  <div class="pinrow">
+    <div style="flex:1"><label id="pinLabel">Set a 4-digit PIN</label><input type="password" id="pinNew" inputmode="numeric" maxlength="8" placeholder="••••" autocomplete="off"></div>
+    <button class="btn-sec" id="pinSetBtn" onclick="setPin()">Set PIN</button>
+  </div>
+  <div class="btn-row" id="pinManage" style="display:none">
+    <button class="btn-sec" onclick="lockNow()">🔒 Lock now</button>
+    <button class="btn-sec btn-danger" onclick="removePin()">Remove PIN</button>
+  </div>
+  <div class="secnote">The PIN keeps casual eyes off your data on this device. It's a local lock, not strong encryption — anyone with the page URL and browser tools could bypass it, so don't treat it as a vault.</div>
+</div>
+
+<div class="foot">
+  Built by <span>ELECTZA</span> · runs entirely in your browser · data saved locally<br>
+  ESS = (largest win day + largest loss day) ÷ total profit × 100
+</div>
+
+<script>
+const LS_DAYS='electza_ess_days', LS_SET='electza_ess_settings';
+let days=[], settings={acct:25000,target:20,goal:1000};
+
+function load(){
+  try{const d=localStorage.getItem(LS_DAYS); if(d) days=JSON.parse(d);}catch(e){days=[];}
+  try{const s=localStorage.getItem(LS_SET); if(s) settings={...settings,...JSON.parse(s)};}catch(e){}
+  // seed first run with the user's current dashboard profit
+  if(days===null||days.length===0){
+    if(!localStorage.getItem('electza_ess_seeded')){
+      days=[{date:today(),amt:36.81}];
+      localStorage.setItem('electza_ess_seeded','1');
+    }
+  }
+  document.getElementById('setAcct').value=settings.acct;
+  document.getElementById('setTarget').value=settings.target;
+  document.getElementById('setGoal').value=settings.goal;
+  document.getElementById('inDate').value=today();
+}
+function today(){const d=new Date();return d.toISOString().slice(0,10);}
+function save(){localStorage.setItem(LS_DAYS,JSON.stringify(days));toast('Saved ✓');}
+function saveSettings(){
+  settings.acct=parseFloat(document.getElementById('setAcct').value)||0;
+  settings.target=parseFloat(document.getElementById('setTarget').value)||20;
+  settings.goal=parseFloat(document.getElementById('setGoal').value)||0;
+  localStorage.setItem(LS_SET,JSON.stringify(settings));
+  document.getElementById('subTarget').textContent=settings.target;
+  toast('Saved ✓');
+  render();
+}
+
+let toastTimer=null;
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove('show'),1400);
+}
+
+/* ---- PIN lock ---- */
+function hashPin(s){let h=5381;const salt='electza#ess';s=salt+s;for(let i=0;i<s.length;i++){h=((h<<5)+h)+s.charCodeAt(i);h=h&0xffffffff;}return (h>>>0).toString(16);}
+function updatePinUI(){
+  const has=!!settings.pinHash;
+  document.getElementById('pinLabel').textContent=has?'Change PIN':'Set a 4-digit PIN';
+  document.getElementById('pinSetBtn').textContent=has?'Change':'Set PIN';
+  document.getElementById('pinManage').style.display=has?'flex':'none';
+}
+function setPin(){
+  const v=(document.getElementById('pinNew').value||'').trim();
+  if(v.length<4){toast('PIN must be 4+ digits');return;}
+  settings.pinHash=hashPin(v);
+  localStorage.setItem(LS_SET,JSON.stringify(settings));
+  document.getElementById('pinNew').value='';
+  updatePinUI(); toast('PIN set ✓');
+}
+function removePin(){
+  if(!confirm('Remove the PIN lock?'))return;
+  delete settings.pinHash;
+  localStorage.setItem(LS_SET,JSON.stringify(settings));
+  updatePinUI(); toast('PIN removed');
+}
+function lockNow(){
+  document.getElementById('lockInput').value='';
+  document.getElementById('lockErr').textContent='';
+  document.getElementById('lockScreen').classList.add('show');
+}
+function tryUnlock(){
+  const v=document.getElementById('lockInput').value||'';
+  if(hashPin(v)===settings.pinHash){
+    document.getElementById('lockScreen').classList.remove('show');
+    document.getElementById('lockInput').value='';
+  } else {
+    document.getElementById('lockErr').textContent='Wrong PIN';
+    document.getElementById('lockInput').value='';
+  }
+}
+
+/* ---- Backup ---- */
+function exportData(){
+  const blob=new Blob([JSON.stringify({v:1,exported:new Date().toISOString(),days,settings},null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download='electza-ess-backup-'+today().replace(/-/g,'')+'.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+  toast('Backup exported');
+}
+function importData(ev){
+  const f=ev.target.files[0]; if(!f)return;
+  const r=new FileReader();
+  r.onload=()=>{
+    try{
+      const data=JSON.parse(r.result);
+      if(!data||!Array.isArray(data.days))throw new Error('bad file');
+      if(!confirm('Replace current data with this backup? Your present days will be overwritten.')){ev.target.value='';return;}
+      days=data.days;
+      if(data.settings)settings={...settings,...data.settings};
+      localStorage.setItem(LS_DAYS,JSON.stringify(days));
+      localStorage.setItem(LS_SET,JSON.stringify(settings));
+      document.getElementById('setAcct').value=settings.acct;
+      document.getElementById('setTarget').value=settings.target;
+      document.getElementById('setGoal').value=settings.goal;
+      updatePinUI(); render(); toast('Backup restored ✓');
+    }catch(e){toast('Could not read that file');}
+    ev.target.value='';
+  };
+  r.readAsText(f);
+}
+function fmt(n){return '$'+ (Math.round(n*100)/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function fmt0(n){return '$'+ Math.round(n).toLocaleString('en-US');}
+
+function addDay(){
+  const date=document.getElementById('inDate').value||today();
+  const amt=parseFloat(document.getElementById('inAmt').value);
+  if(isNaN(amt)){return;}
+  days.push({date,amt});
+  document.getElementById('inAmt').value='';
+  save(); render();
+}
+function delDay(i){days.splice(i,1);save();render();}
+function clearAll(){if(confirm('Clear all logged days?')){days=[];save();render();}}
+
+function calc(){
+  const total=days.reduce((s,d)=>s+d.amt,0);
+  const wins=days.filter(d=>d.amt>0).map(d=>d.amt);
+  const losses=days.filter(d=>d.amt<0).map(d=>Math.abs(d.amt));
+  const win=wins.length?Math.max(...wins):0;
+  const loss=losses.length?Math.max(...losses):0;
+  const ess= total>0 ? (win+loss)/total*100 : (days.length?Infinity:null);
+  const t=settings.target;
+  // min total profit required at current biggest win/loss
+  const reqTotal=(win+loss)>0 ? (win+loss)/(t/100) : null;
+  const need=reqTotal!==null ? Math.max(0,reqTotal-total) : null;
+  return {total,win,loss,ess,reqTotal,need,winDays:wins.length};
+}
+
+function render(){
+  const c=calc(), t=settings.target;
+  // gauge
+  const arc=document.getElementById('arcFill');
+  const len=314.16; // approx arc length of semicircle r=100
+  let pct = c.ess===null?0 : (c.ess===Infinity?1:Math.min(c.ess/100,1));
+  arc.style.strokeDasharray=len;
+  arc.style.strokeDashoffset=len-(len*pct);
+  // colour gauge by pass/fail
+  const passing = c.ess!==null && c.ess!==Infinity && c.ess<=t && c.total>0;
+  arc.setAttribute('stroke', passing?'var(--green)': (c.ess===null?'#1E2940':'var(--red)'));
+  // threshold tick on arc
+  const tline=document.getElementById('threshLine');
+  const ang=Math.PI*(1 - t/100); // map target% onto 180..0deg
+  const cx=115, cy=120, rIn=86, rOut=107;
+  tline.setAttribute('x1', cx+rIn*Math.cos(ang));
+  tline.setAttribute('y1', cy-rIn*Math.sin(ang));
+  tline.setAttribute('x2', cx+rOut*Math.cos(ang));
+  tline.setAttribute('y2', cy-rOut*Math.sin(ang));
+
+  const essEl=document.getElementById('essVal');
+  if(c.ess===null){essEl.textContent='—';essEl.style.color='var(--muted)';}
+  else if(c.ess===Infinity){essEl.textContent='∞';essEl.style.color='var(--red)';}
+  else {essEl.textContent=(Math.round(c.ess*10)/10)+'%';essEl.style.color=passing?'var(--green)':'var(--red)';}
+
+  const badge=document.getElementById('statusBadge');
+  if(c.total<=0){badge.className='status no';badge.textContent=days.length?'Net negative — no profit yet':'Log a day to start';}
+  else if(passing){badge.className='status ok';badge.textContent='✓ QUALIFIED · ESS ≤ '+t+'%';}
+  else {badge.className='status no';badge.textContent='NOT YET · keep building';}
+
+  // metrics
+  document.getElementById('mTotal').textContent=fmt(c.total);
+  document.getElementById('mTotal').className='v '+(c.total>=0?'green':'red');
+  document.getElementById('mDays').textContent=c.winDays;
+  document.getElementById('mWin').textContent=fmt(c.win);
+  document.getElementById('mLoss').textContent=fmt(c.loss);
+  document.getElementById('mReq').textContent=c.reqTotal!==null?fmt(c.reqTotal):'—';
+  document.getElementById('mNeed').textContent=c.need!==null?(c.need<=0?'Qualified ✓':fmt(c.need)):'—';
+  document.getElementById('mNeed').className='v '+(c.need!==null&&c.need<=0?'green':'amber');
+
+  // safe ceiling tomorrow = current largest win (earning ≤ this never raises the bar)
+  const ceilEl=document.getElementById('mCeil');
+  const ceilHint=document.getElementById('ceilHint');
+  if(days.length===0){ceilEl.textContent='—';ceilHint.textContent='';}
+  else if(c.win===0){ceilEl.textContent='any win helps';ceilHint.textContent='No winning day yet — your first win sets the ceiling for the rest.';}
+  else {
+    ceilEl.textContent=fmt(c.win);
+    ceilHint.textContent='Stay at or below '+fmt(c.win)+' tomorrow and your ESS only improves. Beat it and the bar moves up. Avoid red days — losses add straight to the top of the formula.';
+  }
+
+  // est days left at safe pace
+  const leftEl=document.getElementById('mLeft');
+  if(c.need!==null && c.need>0 && c.win>0){
+    leftEl.textContent=Math.ceil(c.need/c.win)+'d';
+  } else if(c.need!==null && c.need<=0){leftEl.textContent='0d';}
+  else {leftEl.textContent='—';}
+
+  // payout
+  document.getElementById('mPayout').textContent=fmt0(settings.acct*0.02);
+
+  // day list
+  const list=document.getElementById('dayList');
+  if(days.length===0){list.innerHTML='<div class="empty">No days logged yet.</div>';}
+  else{
+    const sorted=[...days].map((d,i)=>({...d,i})).sort((a,b)=>a.date<b.date?-1:1);
+    list.innerHTML=sorted.map(d=>{
+      const isWin=d.amt>=0;
+      const big=(isWin&&d.amt===c.win&&c.win>0)?'<span class="tag">biggest win</span>':'';
+      return `<div class="day">
+        <span class="d">${d.date}</span>${big}
+        <span class="a ${isWin?'pos':'neg'}">${isWin?'+':'−'}${fmt(Math.abs(d.amt)).slice(1)}</span>
+        <button class="del" onclick="delDay(${d.i})">×</button>
+      </div>`;
+    }).join('');
+  }
+  document.getElementById('clearWrap').innerHTML=days.length?'<button class="mini" onclick="clearAll()">Clear all</button>':'';
+
+  document.getElementById('subTarget').textContent=t;
+  renderGoal(c);
+  whatIf();
+}
+
+function renderGoal(c){
+  const G=settings.goal, t=settings.target;
+  const card=document.getElementById('goalCard');
+  if(!G||G<=0){card.style.display='none';return;}
+  card.style.display='';
+  document.getElementById('goalAmt').textContent=fmt0(G);
+  const ceiling=G*(t/100);                  // biggest win + biggest loss combined allowed
+  const winCeil=Math.max(0,ceiling-c.loss); // room left for a win day given current loss
+  const remaining=Math.max(0,G-c.total);
+  const minDays=Math.ceil(100/t);
+  const recPerDay=Math.max(1,Math.round(ceiling*0.75)); // 75% of ceiling = buffer
+  const daysLeft=remaining>0?Math.ceil(remaining/recPerDay):0;
+  const pct=Math.min(100,Math.max(0,c.total/G*100));
+  document.getElementById('goalBar').style.width=pct+'%';
+  document.getElementById('goalNow').textContent=fmt(c.total);
+  document.getElementById('goalPct').textContent=Math.round(pct)+'%';
+  document.getElementById('goalTo').textContent=fmt0(G);
+  document.getElementById('gMax').textContent=fmt0(ceiling);
+  document.getElementById('gRec').textContent=fmt0(recPerDay)+'/d';
+  document.getElementById('gMin').textContent=minDays+'d';
+  document.getElementById('gLeft').textContent=remaining>0?daysLeft+'d':'0d';
+  const reached=c.total>=G;
+  const passing=c.ess!==null&&c.ess!==Infinity&&c.ess<=t;
+  let h='';
+  if(reached&&passing){h='✓ Goal hit and ESS passes — you can request payout (mind the withdrawal timer + 5-min hold rule).';}
+  else if(reached&&!passing){h='Goal amount reached but ESS is still '+(Math.round(c.ess*10)/10)+'%. Add more even days — no big ones — to dilute below '+t+'%.';}
+  else if(c.win>ceiling){h='⚠ Your biggest day '+fmt(c.win)+' is above the '+fmt0(ceiling)+' ceiling for a '+fmt0(G)+' goal. Either raise the goal or add several smaller days to dilute it.';}
+  else {h='Keep each day at or below '+fmt0(recPerDay)+' (hard ceiling '+fmt0(ceiling)+'), no red days. About '+daysLeft+' more day'+(daysLeft===1?'':'s')+' at this pace.';
+    if(c.loss>0){h+=' Your '+fmt(c.loss)+' loss day leaves only '+fmt0(winCeil)+' room for a single win day.';}}
+  document.getElementById('goalHint').textContent=h;
+}
+
+function whatIf(){
+  const c=calc(), t=settings.target;
+  const raw=document.getElementById('wfAmt').value;
+  const out=document.getElementById('wfOut');
+  if(raw===''||isNaN(parseFloat(raw))){out.classList.remove('show');return;}
+  out.classList.add('show');
+  const p=parseFloat(raw);
+  const nTotal=c.total+p;
+  const nWin=p>0?Math.max(c.win,p):c.win;
+  const nLoss=p<0?Math.max(c.loss,Math.abs(p)):c.loss;
+  const nEss= nTotal>0 ? (nWin+nLoss)/nTotal*100 : Infinity;
+  const pass = nTotal>0 && nEss<=t;
+  document.getElementById('wfTot').textContent=fmt(nTotal);
+  const essOut=document.getElementById('wfEss');
+  essOut.textContent= nEss===Infinity?'∞':(Math.round(nEss*10)/10)+'%';
+  essOut.style.color=pass?'var(--green)':'var(--red)';
+  const res=document.getElementById('wfRes');
+  if(pass){res.textContent='✓ Qualifies';res.style.color='var(--green)';}
+  else if(nEss>c.ess && c.ess!==null && c.ess!==Infinity){res.textContent='Raises ESS — careful';res.style.color='var(--red)';}
+  else {res.textContent='Not yet, but improving';res.style.color='var(--amber)';}
+}
+
+load();
+updatePinUI();
+if(settings.pinHash){ lockNow(); }
+render();
+
+document.getElementById('lockInput').addEventListener('keydown',e=>{if(e.key==='Enter')tryUnlock();});
+</script>
+</body>
+</html>
